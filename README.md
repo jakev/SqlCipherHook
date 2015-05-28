@@ -2,7 +2,7 @@
 SqlCipherHook is an [Xposed Framework](http://repo.xposed.info/) module that will attempt to capture crypto keys from applications using the [SQLCipher](https://www.zetetic.net/sqlcipher/) library.  If it is successful, it will print the keys to the Android log buffers (viewable with `logcat`).
 
 ##Usage
-You will need to root your test device and install the Xposed Framework.  Next, you can download and install the SqlCipherHooks APK, [here](https://github.com/jakev/dtf/tree/master/bin/SqlCipherHook.apk). You'll need to enable the module and reboot the device after installing the APK.
+You will need to root your test device and install the Xposed Framework.  Next, you can download and install the SqlCipherHooks APK, [here](https://github.com/jakev/SqlCipherHook/blob/master/bin/SqlCipherHook.apk?raw=true). You'll need to enable the module and reboot the device after installing the APK.
 
 Once installed, you can interact with your test application while running the following filtered `logcat` command:
 
