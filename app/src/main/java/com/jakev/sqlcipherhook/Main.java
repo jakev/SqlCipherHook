@@ -15,6 +15,8 @@
  */
 package com.jakev.sqlcipherhook;
 
+import android.app.Application;
+import android.content.Context;
 import android.util.Log;
 
 import net.sqlcipher.database.SQLiteDatabase.CursorFactory;
@@ -29,21 +31,40 @@ import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
 public class Main implements IXposedHookLoadPackage {
 
     private static final String TAG = "SqlCipherHook";
+    private static final String SQLCIPHER_CLASS_NAME = "net.sqlcipher.database.SQLiteDatabase";
+
+    private String currentPackageName = "";
 
     public void handleLoadPackage(final LoadPackageParam lpparam) throws Throwable {
 
-        /* Only hook applications that have the SqlCipher libraries */
-        if (!isSqlCipherApp())
-            return;
+        currentPackageName = lpparam.packageName;
 
-        final String packageName = lpparam.packageName;
+        findAndHookMethod(Application.class, "attach", Context.class, new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(XC_MethodHook.MethodHookParam param) throws Throwable {
+
+                Context context = (Context) param.args[0];
+                ClassLoader cl = context.getClassLoader();
+
+                if (hasSqlCipher(cl)) {
+                    hookSqlCipher(cl);
+                }
+            }
+        });
+    }
+
+    /* Perform Hooks */
+    private void hookSqlCipher(ClassLoader classLoader) {
+
+
+        Log.d(TAG, "Hooking SqlCipher libraries for: " + currentPackageName);
 
          /* /src/net/sqlcipher/database/SQLiteDatabase.java
          * public static SQLiteDatabase openDatabase(String path, String password,
          *                                           CursorFactory factory, int flags,
          *                                           SQLiteDatabaseHook databaseHook)
          */
-        findAndHookMethod("net.sqlcipher.database.SQLiteDatabase", lpparam.classLoader,
+        findAndHookMethod("net.sqlcipher.database.SQLiteDatabase", classLoader,
                 "openDatabase", String.class, String.class, CursorFactory.class,
                 int.class, SQLiteDatabaseHook.class, new XC_MethodHook() {
 
@@ -53,9 +74,9 @@ public class Main implements IXposedHookLoadPackage {
                         String path = (String)param.args[0];
                         String password = (String)param.args[1];
 
-                        Log.d(TAG, "["+packageName+"] SqlCipher openDatabase( ... ) called!");
-                        Log.d(TAG, "["+packageName+"] Password Used: "+password);
-                        Log.d(TAG, "["+packageName+"] DB Path: "+path);
+                        Log.d(TAG, "["+currentPackageName+"] SqlCipher openDatabase( ... ) called!");
+                        Log.d(TAG, "["+currentPackageName+"] Password Used: "+password);
+                        Log.d(TAG, "["+currentPackageName+"] DB Path: "+path);
                     }
                 });
 
@@ -64,7 +85,7 @@ public class Main implements IXposedHookLoadPackage {
          *                                           CursorFactory factory, int flags,
          *                                           SQLiteDatabaseHook databaseHook)
          */
-        findAndHookMethod("net.sqlcipher.database.SQLiteDatabase", lpparam.classLoader,
+        findAndHookMethod("net.sqlcipher.database.SQLiteDatabase", classLoader,
                 "openDatabase", String.class, char[].class, CursorFactory.class,
                 int.class, SQLiteDatabaseHook.class, new XC_MethodHook() {
 
@@ -74,22 +95,21 @@ public class Main implements IXposedHookLoadPackage {
                         String path = (String)param.args[0];
                         String password = new String((char[])param.args[1]);
 
-                        Log.d(TAG, "["+packageName+"] SqlCipher openDatabase( ... ) called!");
-                        Log.d(TAG, "["+packageName+"] Password Used: "+password);
-                        Log.d(TAG, "["+packageName+"] DB Path: "+path);
+                        Log.d(TAG, "["+currentPackageName+"] SqlCipher openDatabase( ... ) called!");
+                        Log.d(TAG, "["+currentPackageName+"] Password Used: "+password);
+                        Log.d(TAG, "["+currentPackageName+"] DB Path: "+path);
                     }
                 });
     } // End Hooks
 
-    private boolean isSqlCipherApp() {
+    private boolean hasSqlCipher(ClassLoader classLoader) {
 
         try {
-            Class.forName("net.sqlcipher.database.SQLiteDatabase");
+            classLoader.loadClass(SQLCIPHER_CLASS_NAME);
         }
         catch (ClassNotFoundException e) {
             return false;
         }
-
         return true;
     }
 }
