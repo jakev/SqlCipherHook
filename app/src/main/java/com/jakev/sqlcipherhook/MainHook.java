@@ -28,7 +28,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;
 
 import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
 
-public class Main implements IXposedHookLoadPackage {
+public class MainHook implements IXposedHookLoadPackage {
 
     private static final String TAG = "SqlCipherHook";
     private static final String SQLCIPHER_CLASS_NAME = "net.sqlcipher.database.SQLiteDatabase";
