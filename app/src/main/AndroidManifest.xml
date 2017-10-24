@@ -8,7 +8,7 @@
             android:value="true"/>
         <meta-data
             android:name="xposedminversion"
-            android:value="30"/>
+            android:value="53"/>
         <meta-data
             android:name="xposeddescription"
             android:value="Logs SQLCipher DB encryption keys to log buffers"/>
