@@ -22,5 +22,4 @@ android {
 dependencies {
     compile 'com.android.support:appcompat-v7:22.1.1'
     provided 'de.robv.android.xposed:api:53'
-    compile 'net.zetetic:android-database-sqlcipher:3.5.7@aar'
 }

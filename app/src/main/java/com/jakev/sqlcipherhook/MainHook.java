@@ -19,14 +19,13 @@ import android.app.Application;
 import android.content.Context;
 import android.util.Log;
 
-import net.sqlcipher.database.SQLiteDatabase.CursorFactory;
-import net.sqlcipher.database.SQLiteDatabaseHook;
-
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
+import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;
 
 import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
+import static de.robv.android.xposed.XposedHelpers.findClass;
 
 public class MainHook implements IXposedHookLoadPackage {
 
@@ -56,50 +55,36 @@ public class MainHook implements IXposedHookLoadPackage {
     /* Perform Hooks */
     private void hookSqlCipher(ClassLoader classLoader) {
 
-
         Log.d(TAG, "Hooking SqlCipher libraries for: " + currentPackageName);
 
-         /* /src/net/sqlcipher/database/SQLiteDatabase.java
-         * public static SQLiteDatabase openDatabase(String path, String password,
-         *                                           CursorFactory factory, int flags,
-         *                                           SQLiteDatabaseHook databaseHook)
-         */
-        findAndHookMethod("net.sqlcipher.database.SQLiteDatabase", classLoader,
-                "openDatabase", String.class, String.class, CursorFactory.class,
-                int.class, SQLiteDatabaseHook.class, new XC_MethodHook() {
+        /* We can simply hook all calls to "openDatabase(...)", and handle the slight differences */
+        Class<?> clazz = findClass(SQLCIPHER_CLASS_NAME, classLoader);
+        XC_MethodHook hook =  new XC_MethodHook() {
 
-                    @Override
-                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+            @Override
+            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
 
-                        String path = (String)param.args[0];
-                        String password = (String)param.args[1];
+                /* Param 1 will always be a string. */
+                String path = (String)param.args[0];
 
-                        Log.d(TAG, "["+currentPackageName+"] SqlCipher openDatabase( ... ) called!");
-                        Log.d(TAG, "["+currentPackageName+"] Password Used: "+password);
-                        Log.d(TAG, "["+currentPackageName+"] DB Path: "+path);
-                    }
-                });
+                /* Param 2 can be either a char[] or a String. */
+                String password = "ERROR";
+                Object inPassword = param.args[1];
 
-        /* /src/net/sqlcipher/database/SQLiteDatabase.java
-         * public static SQLiteDatabase openDatabase(String path, char[] password,
-         *                                           CursorFactory factory, int flags,
-         *                                           SQLiteDatabaseHook databaseHook)
-         */
-        findAndHookMethod("net.sqlcipher.database.SQLiteDatabase", classLoader,
-                "openDatabase", String.class, char[].class, CursorFactory.class,
-                int.class, SQLiteDatabaseHook.class, new XC_MethodHook() {
+                if (inPassword instanceof String) {
+                    password = (String)inPassword;
+                } else if (inPassword instanceof char[]) {
+                    password = String.valueOf((char[])inPassword);
+                }
 
-                    @Override
-                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                Log.d(TAG, "[" + currentPackageName + "] SqlCipher openDatabase( ... ) called!");
+                Log.d(TAG, "[" + currentPackageName + "] Password Used: " + password);
+                Log.d(TAG, "[" + currentPackageName + "] DB Path: " + path);
+            }
+        };
 
-                        String path = (String)param.args[0];
-                        String password = new String((char[])param.args[1]);
-
-                        Log.d(TAG, "["+currentPackageName+"] SqlCipher openDatabase( ... ) called!");
-                        Log.d(TAG, "["+currentPackageName+"] Password Used: "+password);
-                        Log.d(TAG, "["+currentPackageName+"] DB Path: "+path);
-                    }
-                });
+        /* Perform the hook */
+        XposedBridge.hookAllMethods(clazz, "openDatabase", hook);
     } // End Hooks
 
     private boolean hasSqlCipher(ClassLoader classLoader) {
